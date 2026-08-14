@@ -38,9 +38,9 @@ spec:
         
         # Opcional pero recomendado en K8s: Definir un "Health Check"
         # Kubernetes reiniciará el contenedor automáticamente si Metabase se congela
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 300
-          periodSeconds: 240
+        #livenessProbe:
+        #  httpGet:
+        #    path: /api/health
+        #    port: 3000
+        #  initialDelaySeconds: 300
+        #  periodSeconds: 240
