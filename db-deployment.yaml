@@ -64,7 +64,7 @@ spec:
       volumes:
       - name: mysql-storage
         persistentVolumeClaim:
-          claimName: mysql-pvc
+          claimName: mysql-persistent-vc
       - name: init-script
         configMap:
           name: mysql-init-script
