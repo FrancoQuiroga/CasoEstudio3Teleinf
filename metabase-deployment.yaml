@@ -27,7 +27,7 @@ spec:
         #Variables de entorno desde el config map
         envFrom: 
           - configMapRef:
-            name: metabase-env
+              name: metabase-env
         # secreto de la DB
         env:
           - name: MB_DB_PASS
