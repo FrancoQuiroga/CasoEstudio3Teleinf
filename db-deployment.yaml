@@ -28,7 +28,7 @@ spec:
       #que paso acá?, Había que asignar un número de recursos (No sé si es necesario)
       containers:
       - name: mysql
-        image: mysql:5.7
+        image: mysql:8.0
         resources:
         # Ponemos como mínimo 1Gbi de memoria y 1 vcpu. Y como máximo el doble
           requests:
