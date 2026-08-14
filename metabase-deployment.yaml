@@ -39,22 +39,24 @@ spec:
         # Opcional pero recomendado en K8s: Definir un "Health Check"
         # Kubernetes reiniciará el contenedor automáticamente si Metabase se congela
         startupProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            failureThreshold: 40
-            periodSeconds: 30
-            readinessProbe:
-              httpGet:
-                path: /api/health
-                port: 3000
-              initialDelaySeconds: 10
-              periodSeconds: 10
-              failureThreshold: 18
-            livenessProbe:
-              httpGet:
-                path: /api/health
-                port: 3000
-              initialDelaySeconds: 10
-              periodSeconds: 30
-              failureThreshold: 4
+          httpGet:
+            path: /api/health
+            port: 3000
+          failureThreshold: 40
+          periodSeconds: 30
+          
+        readinessProbe: # <-- CORREGIDO: Alineado a la altura de startupProbe
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 18
+          
+        livenessProbe: # <-- CORREGIDO: Alineado a la altura de startupProbe
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          failureThreshold: 4
