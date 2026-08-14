@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: metabase
-        image: metabase/metabase:latest
+        image: metabase/metabase:v0.62.13
         resources:
           requests:
             memory: "4096Mi"
