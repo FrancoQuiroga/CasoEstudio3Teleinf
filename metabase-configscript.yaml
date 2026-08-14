@@ -48,7 +48,7 @@ data:
             "port": 3306,
             "dbname": "mobility_db",
             "user": "app_user",
-            "password": "PasswordSeguro123!"
+            "password": "holasoyunapass"
           }
         }
       }'
