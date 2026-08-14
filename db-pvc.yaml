@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mysql-persistent-vc
+  name: mysql-persistent-vc3
 spec:
   accessModes:
     - ReadWriteOnce
