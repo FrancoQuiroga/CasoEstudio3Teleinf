@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: metabase-setup-job
+spec:
+  backoffLimit: 3 
+  template:
+    metadata:
+      name: metabase-setup-job
+    spec:
+      # Fundamental en un Job: Le dice a K8s que no lo mantenga encendido para siempre
+      restartPolicy: OnFailure 
+      containers:
+      - name: setup-container
+        # Usamos Alpine Linux por ser extremadamente liviano (5 MB)
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        # Instalamos curl y jq "al vuelo" antes de correr el script
+        args:
+          - "apk add --no-cache curl jq && sh /scripts/setup.sh"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+      volumes:
+      - name: script-volume
+        configMap:
+          name: metabase-setup-script

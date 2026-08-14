@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metabase
+  template:
+    metadata:
+      labels:
+        app: metabase
+    spec:
+      containers:
+      - name: metabase
+        image: metabase/metabase:latest
+        resources:
+          requests:
+            memory: "4096Mi"
+            cpu: "2000m"
+          limits:
+            memory: "8192Mi"
+            cpu: "4000m"
+        ports:
+        - containerPort: 3000
+        #Variables de entorno desde el config map
+        envFrom: 
+          - configMapRef:
+            name: metabase-env
+        # secreto de la DB
+        env:
+          - name: MB_DB_PASS
+            valueFrom: 
+               secretKeyRef:
+                 name: db-secrets
+                 key: mysqlpassword
+        
+        # Opcional pero recomendado en K8s: Definir un "Health Check"
+        # Kubernetes reiniciará el contenedor automáticamente si Metabase se congela
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 120
+          periodSeconds: 60

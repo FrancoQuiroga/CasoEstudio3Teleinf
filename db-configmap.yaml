@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: mysql-init-script
 data:
+
+  MYSQL_USER: "app_user"
   01-init.sql: |
     CREATE DATABASE IF NOT EXISTS mobility_db;
     CREATE DATABASE IF NOT EXISTS metabase_db;

@@ -1,0 +1,56 @@
+#En este archivito usamos el script con el que configuramos metabase en el caso de estudio 2
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metabase-setup-script
+data:
+  setup.sh: |
+    #!/bin/sh
+    
+    echo "Esperando a que Metabase termine su inicialización interna..."
+    
+    # Hacemos ping al Service interno de K8s, puerto 3000
+    while ! curl -s http://metabase-service:3000/api/health | grep -q '"status":"ok"'; do
+      echo "Metabase no está listo aún. Reintentando en 5 segundos..."
+      sleep 5
+    done
+    echo "Metabase está listo."
+
+    # Extraer el token de configuración
+    SETUP_TOKEN=$(curl -s http://metabase-service:3000/api/session/properties | jq -r '.["setup-token"]')
+
+    # Verificamos si ya se configuró previamente para evitar errores si el Job se relanza
+    if [ "$SETUP_TOKEN" = "null" ] || [ -z "$SETUP_TOKEN" ]; then
+        echo "El token de setup es nulo. Esto significa que Metabase ya fue configurado."
+        exit 0
+    fi
+
+    echo "Conectando mobility_db y creando usuario administrador..."
+    curl -X POST http://metabase-service:3000/api/setup \
+      -H "Content-Type: application/json" \
+      -d '{
+        "token": "'"${SETUP_TOKEN}"'",
+        "user": {
+          "first_name": "Admin",
+          "last_name": "Sistema",
+          "email": "admin@proyecto.com",
+          "password": "PasswordSeguro123!"
+        },
+        "prefs": {
+          "site_name": "Dashboard de Movilidad",
+          "allow_tracking": false
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "Google Mobility",
+          "details": {
+            "host": "mysql-service",
+            "port": 3306,
+            "dbname": "mobility_db",
+            "user": "app_user",
+            "password": "PasswordSeguro123!"
+          }
+        }
+      }'
+    
+    echo -e "\nConfiguración automática completada exitosamente."

@@ -25,7 +25,7 @@ spec:
         volumeMounts:
         - name: shared-data
           mountPath: /tmp/data
-      #que paso acá?
+      #que paso acá?, Había que asignar un número de recursos (No sé si es necesario)
       containers:
       - name: mysql
         image: mysql:9.0
@@ -37,21 +37,26 @@ spec:
           limits:
             memory: "2048Mi"
             cpu: "2000m"
+        envFrom:
+          - configMapRef:
+              name: mysql-init-script
+
         env:
-        # Nota: En un entorno de producción estricto, esto se cambia por un recurso de tipo "Secret".
-        - name: MYSQL_ROOT_PASSWORD
-          value: "TuPasswordRootSeguro" 
-        - name: MYSQL_USER
-          value: "app_user"
-        - name: MYSQL_PASSWORD
-          value: "PasswordSeguro123!"
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom: 
+               secretKeyRef:
+                 name: db-secrets
+                 key: mysql_root_password
+          - name: MB_DB_PASS
+            valueFrom: 
+               secretKeyRef:
+                 name: db-secrets
+                 key: mysqlpassword
         ports:
         - containerPort: 3306
         volumeMounts:
-        # Montamos el disco duro persistente
         - name: mysql-storage
           mountPath: /var/lib/mysql
-        # Montamos el ConfigMap en la carpeta especial de inicialización de la imagen oficial
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
 
