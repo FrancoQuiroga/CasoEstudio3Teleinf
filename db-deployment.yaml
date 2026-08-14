@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate 
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      initContainers:
+      - name: download-dataset
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "Descargando dataset desde GitHub..."
+          wget -qO /tmp/data/google-mobility.sql.gz "https://raw.githubusercontent.com/FrancoQuiroga/CasoEstudio3Teleinf/main/data/google-mobility.sql.gz"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /tmp/data
+      #que paso acá?
+      containers:
+      - name: mysql
+        image: mysql:9.0
+        resources:
+        # Ponemos como mínimo 1Gbi de memoria y 1 vcpu. Y como máximo el doble
+          requests:
+            memory: "1024Mi"
+            cpu: "1000m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+        env:
+        # Nota: En un entorno de producción estricto, esto se cambia por un recurso de tipo "Secret".
+        - name: MYSQL_ROOT_PASSWORD
+          value: "TuPasswordRootSeguro" 
+        - name: MYSQL_USER
+          value: "app_user"
+        - name: MYSQL_PASSWORD
+          value: "PasswordSeguro123!"
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        # Montamos el disco duro persistente
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        # Montamos el ConfigMap en la carpeta especial de inicialización de la imagen oficial
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+
+      
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: init-script
+        configMap:
+          name: mysql-init-script
+      - name: shared-data
+        emptyDir: {} 
