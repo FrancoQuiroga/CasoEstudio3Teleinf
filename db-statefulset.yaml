@@ -35,7 +35,7 @@ spec:
             wget -qO /tmp/data/google-mobility.sql.gz "https://raw.githubusercontent.com/FrancoQuiroga/CasoEstudio3Teleinf/main/data/google-mobility.sql.gz"
           volumeMounts:
             - name: shared-data
-              mountPath: /tmp/data
+              mountPath: /data
       containers:
         - name: mysql
           image: mysql:8.0
