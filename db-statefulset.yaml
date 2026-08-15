@@ -1,13 +1,13 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: mysql-deployment
+  name: mysql-statefulset
+  namespace: fequirogaa-dev
 spec:
+  serviceName: mysql-service
   selector:
     matchLabels:
       app: mysql
-  strategy:
-    type: Recreate 
   template:
     metadata:
       labels:
@@ -25,12 +25,10 @@ spec:
         volumeMounts:
         - name: shared-data
           mountPath: /tmp/data
-      #que paso acá?, Había que asignar un número de recursos (No sé si es necesario)
       containers:
       - name: mysql
         image: mysql:8.0
         resources:
-        # Ponemos como mínimo 1Gbi de memoria y 1 vcpu. Y como máximo el doble
           requests:
             memory: "1024Mi"
             cpu: "1000m"
@@ -40,15 +38,14 @@ spec:
         envFrom:
           - configMapRef:
               name: mysql-init-script
-
         env:
           - name: MYSQL_ROOT_PASSWORD
-            valueFrom: 
+            valueFrom:
                secretKeyRef:
                  name: db-secrets
                  key: mysql_root_password
           - name: MYSQL_PASSWORD
-            valueFrom: 
+            valueFrom:
                secretKeyRef:
                  name: db-secrets
                  key: mysqlpassword
@@ -62,7 +59,6 @@ spec:
         - name: shared-data
           mountPath: /tmp/data
 
-      
       volumes:
       - name: mysql-storage
         persistentVolumeClaim:
@@ -71,4 +67,4 @@ spec:
         configMap:
           name: mysql-init-script
       - name: shared-data
-        emptyDir: {} 
+        emptyDir: {}

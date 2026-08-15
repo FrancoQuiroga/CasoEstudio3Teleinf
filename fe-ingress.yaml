@@ -4,11 +4,11 @@ metadata:
   name: metabase-ingress
   namespace: fequirogaa-dev
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
 spec:
+  ingressClassName: nginx
   rules:
   - host: fequirogaa-metabase.my.kube.um.edu.ar
     http:
