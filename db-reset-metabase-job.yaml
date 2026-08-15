@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-reset-metabase-job
+  namespace: fequirogaa-dev
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: db-reset
+        image: mysql:8.0
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secrets
+                key: mysql_root_password
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -e
+            echo "Esperando a que MySQL esté listo..."
+            for i in $(seq 1 60); do
+              if mysqladmin ping -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" --silent 2>/dev/null; then
+                echo "MySQL listo."
+                break
+              fi
+              sleep 5
+            done
+
+            echo "Eliminando esquema parcial de metabase_db..."
+            mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" \
+              -e "DROP DATABASE IF EXISTS metabase_db; \
+                  CREATE DATABASE IF NOT EXISTS metabase_db; \
+                  GRANT ALL PRIVILEGES ON metabase_db.* TO 'app_user'@'%'; \
+                  FLUSH PRIVILEGES;"
+
+            echo "metabase_db creada limpia. Tablas actuales:"
+            mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" -N -e \
+              "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='metabase_db';"
