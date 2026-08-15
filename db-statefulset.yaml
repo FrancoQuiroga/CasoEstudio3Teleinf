@@ -1,10 +1,13 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: mysql-statefulset
+  name: mysql
   namespace: fequirogaa-dev
+  labels:
+    app: mysql
 spec:
   serviceName: mysql-service
+  replicas: 1
   selector:
     matchLabels:
       app: mysql
@@ -13,58 +16,72 @@ spec:
       labels:
         app: mysql
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: cluster-01-workers-4phg9-6w74j
       initContainers:
-      - name: download-dataset
-        image: alpine:latest
-        command:
-        - sh
-        - -c
-        - |
-          echo "Descargando dataset desde GitHub..."
-          wget -qO /tmp/data/google-mobility.sql.gz "https://raw.githubusercontent.com/FrancoQuiroga/CasoEstudio3Teleinf/main/data/google-mobility.sql.gz"
-        volumeMounts:
-        - name: shared-data
-          mountPath: /tmp/data
+        - name: remove-lost-found
+          image: busybox:latest
+          command: ["rm", "-fr", "/var/lib/mysql/lost+found"]
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
       containers:
-      - name: mysql
-        image: mysql:8.0
-        resources:
-          requests:
-            memory: "1024Mi"
-            cpu: "1000m"
-          limits:
-            memory: "2048Mi"
-            cpu: "2000m"
-        envFrom:
-          - configMapRef:
-              name: mysql-init-script
-        env:
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-               secretKeyRef:
-                 name: db-secrets
-                 key: mysql_root_password
-          - name: MYSQL_PASSWORD
-            valueFrom:
-               secretKeyRef:
-                 name: db-secrets
-                 key: mysqlpassword
-        ports:
-        - containerPort: 3306
-        volumeMounts:
-        - name: mysql-storage
-          mountPath: /var/lib/mysql
-        - name: init-script
-          mountPath: /docker-entrypoint-initdb.d
-        - name: shared-data
-          mountPath: /tmp/data
-
+        - name: mysql
+          image: mysql:8.0
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - 127.0.0.1
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - 127.0.0.1
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
       volumes:
-      - name: mysql-storage
-        persistentVolumeClaim:
-          claimName: mysql-persistent-vc3
-      - name: init-script
-        configMap:
-          name: mysql-init-script
-      - name: shared-data
-        emptyDir: {}
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-pvc
