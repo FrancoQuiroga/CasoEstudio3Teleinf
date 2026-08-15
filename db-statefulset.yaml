@@ -25,6 +25,17 @@ spec:
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+        - name: download-dataset
+          image: alpine:latest
+          command:
+          - sh
+          - -c
+          - |
+            echo "Descargando dataset desde GitHub..."
+            wget -qO /tmp/data/google-mobility.sql.gz "https://raw.githubusercontent.com/FrancoQuiroga/CasoEstudio3Teleinf/main/data/google-mobility.sql.gz"
+          volumeMounts:
+            - name: shared-data
+          mountPath: /tmp/data
       containers:
         - name: mysql
           image: mysql:8.0
