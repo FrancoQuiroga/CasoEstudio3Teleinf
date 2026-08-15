@@ -68,6 +68,10 @@ spec:
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+            - name: shared-data
+              mountPath: /tmp/data
           resources:
             requests:
               memory: 256Mi

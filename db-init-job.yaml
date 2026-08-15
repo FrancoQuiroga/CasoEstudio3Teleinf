@@ -1,0 +1,84 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-job
+  namespace: fequirogaa-dev
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: download-dataset
+        image: alpine:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "Descargando dataset desde GitHub..."
+          wget -qO /tmp/data/google-mobility.sql.gz "https://raw.githubusercontent.com/FrancoQuiroga/CasoEstudio3Teleinf/main/data/google-mobility.sql.gz"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /tmp/data
+      containers:
+      - name: db-init
+        image: mysql:8.0
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secrets
+                key: mysql_root_password
+          - name: APP_USER_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secrets
+                key: mysqlpassword
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -e
+            echo "Esperando a que MySQL esté listo..."
+            for i in $(seq 1 60); do
+              if mysqladmin ping -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" --silent 2>/dev/null; then
+                echo "MySQL listo."
+                break
+              fi
+              echo "MySQL aún no está listo ($i/60)..."
+              sleep 5
+            done
+
+            echo "Creando bases de datos y usuario de aplicación..."
+            mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" \
+              -e "CREATE DATABASE IF NOT EXISTS mobility_db; \
+                  CREATE DATABASE IF NOT EXISTS metabase_db; \
+                  CREATE USER IF NOT EXISTS 'app_user'@'%' IDENTIFIED BY '${APP_USER_PASSWORD}'; \
+                  ALTER USER 'app_user'@'%' IDENTIFIED BY '${APP_USER_PASSWORD}'; \
+                  GRANT ALL PRIVILEGES ON mobility_db.* TO 'app_user'@'%'; \
+                  GRANT ALL PRIVILEGES ON metabase_db.* TO 'app_user'@'%'; \
+                  FLUSH PRIVILEGES;"
+
+            echo "Verificando si la tabla mobility ya tiene datos..."
+            COUNT=$(mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" -N -e \
+              "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mobility_db' AND table_name='mobility';")
+            ROWS=$(mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" -N -e \
+              "SELECT COUNT(*) FROM mobility_db.mobility;" 2>/dev/null || echo "0")
+
+            if [ "$COUNT" = "0" ] || [ -z "$ROWS" ] || [ "$ROWS" = "0" ]; then
+              echo "Importando dataset en mobility_db..."
+              zcat /tmp/data/google-mobility.sql.gz | mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" mobility_db
+              echo "Importación completada."
+            else
+              echo "Dataset ya importado ($ROWS registros). No se vuelve a importar."
+            fi
+
+            echo "=== RESULTADO ==="
+            mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" -e "SHOW DATABASES;"
+            mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT COUNT(*) AS total FROM mobility_db.mobility;"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /tmp/data
+      volumes:
+      - name: shared-data
+        emptyDir: {}
